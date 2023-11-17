@@ -3,6 +3,7 @@ from git import Git
 from git.objects import commit
 import bpy
 from git import Repo
+from tqdm import tqdm
 
 import numpy as np
 
@@ -25,8 +26,8 @@ def prepare_scene():
 prepare_scene()
 
 repo_path = '/home/benjamin/Schreibtisch/JKU/Semester 4/Pattern Classification/repository/bird_boy/'
-repo_path = "/home/benjamin/Schreibtisch/JKU/Semester 5/Missing Semester/first_project/"
-
+# repo_path = "/home/benjamin/Schreibtisch/JKU/Semester 5/Missing Semester/first_project/"
+repo_path = '/home/benjamin/Dokumente/tmp/logseq_rep/logseq/'
 
 class CommitNode:
     def __init__(self, commit_hash, parent_hashes, message, author, date, idx):
@@ -52,17 +53,20 @@ class GitCommitTree:
         self.commits = {}
         self.REPO = Repo
 
-        for commit in Repo.iter_commits():
-            self.add_gitpython_commit(commit)
-        
+        print(len(list(Repo.iter_commits())))
+        for commit in tqdm(Repo.iter_commits()):
+            self.add_gitpython_commit(commit, False)
+        self.update_parents()
+
         self.root_hash = repo.head.commit.hexsha
 
-    def add_commit(self, commit):
+    def add_commit(self, commit, update=True):
         if commit.commit_hash in self.commits.keys():
             return
 
         self.commits[commit.commit_hash] = commit
-        self.update_parents()
+        if update:
+            self.update_parents()
     
     def update_parents(self):
         for commit in self.commits.values():
@@ -71,7 +75,6 @@ class GitCommitTree:
                     continue
                 self.commits[parent_hash].add_child(commit)
                 self.commits[commit.commit_hash].add_parent(self.commits[parent_hash])
-
 
     def get_commit(self, commit_hash):
         return self.commits.get(commit_hash, None)
@@ -93,7 +96,7 @@ class GitCommitTree:
                 is_last_parent = (i == len(commit.parents) - 1)
                 self.print_tree_graphical(parent.commit_hash, new_prefix, is_last_parent)
 
-    def add_gitpython_commit(self, git_commit):
+    def add_gitpython_commit(self, git_commit, update=True):
         commit_hash = git_commit.hexsha
         parent_hashes = [parent.hexsha for parent in git_commit.parents]
         author = git_commit.author.name
@@ -101,7 +104,7 @@ class GitCommitTree:
         date = git_commit.authored_datetime
 
         commit_node = CommitNode(commit_hash, parent_hashes, message, author, date, len(self.commits))
-        self.add_commit(commit_node)
+        self.add_commit(commit_node, update)
 
     def create_mesh_for_tree(self):
 
@@ -117,22 +120,22 @@ class GitCommitTree:
         obj.location = (0, 0, 0)  # Set the location to the desired position
 
         # Create a single vertex and add it to the mesh
+        height = 0
+        horizontal = 0
+        direction = True
         for i, node in enumerate(self.commits.values()): 
             mesh.vertices.add(1)
-            # mesh.vertices[-1].co = (
-            #     np.cos(np.random.rand() * 2 * np.pi) * radius, 
-            #     np.sin(np.random.rand() * 2 * np.pi) * radius, 
-            #     node.id)  # Set the vertex's position
 
+            if len(node.parents) > 1:
+                horizontal = 0
+                height += 0.2
+                direction = not direction
+            else:
+                horizontal += 0.1
             mesh.vertices[-1].co = (
-                np.cos(np.random.rand() + 2 * np.pi * i / 5) * radius * (1 + i/10), 
-                np.sin(np.random.rand() + 2 * np.pi * i / 5) * radius * (1 + i/10), 
-                i)  # Set the vertex's position
-
-            for parent in node.parents:
-                mesh.edges.add(1)
-                mesh.edges[-1].vertices = [parent.id, node.id]
-
+                horizontal * (1 -  2 *int(direction)), 
+                0, 
+                height)
 
         # Update the mesh and the scene
         mesh.update()
@@ -152,7 +155,7 @@ class GitCommitTree:
         settings.render_type = "OBJECT"
         settings.instance_object = bpy.data.objects['Cube']
         settings.particle_size = 0.02
-        settings.count = len(self.nodes)
+        settings.count = 100
 
         # ps = bpy.ops.object.particle_system_add()
         # bpy.data.particles["ParticleSettings"].type = 'HAIR'
@@ -161,4 +164,4 @@ class GitCommitTree:
 
 repo = Repo(repo_path)
 git_tree = GitCommitTree(repo)
-git_tree.print_tree_graphical()
+git_tree.create_mesh_for_tree()
