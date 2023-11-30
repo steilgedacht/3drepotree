@@ -38,6 +38,10 @@ def prepare_scene():
 
     # add a light source
     bpy.ops.object.light_add(type='SUN', radius=1, align='WORLD', location=(33.4475, 0.308792, 39.9238), scale=(1, 1, 1))
+    new_light = bpy.context.active_object
+    new_light.rotation_euler = (0, 0.97, -0.73)
+
+
 
 
 prepare_scene()
@@ -145,10 +149,11 @@ class GitCommitTree:
             branch.modifiers["GeometryNodes"]["Socket_2"] = horizontal
             branch.modifiers["GeometryNodes"]["Socket_5"] = 3 / (height + 1) + 0.2
             bpy.context.object.modifiers["GeometryNodes"]["Socket_5"] = 1.4
+            bpy.context.object.modifiers["GeometryNodes"]["Socket_9"] = 0.4 + height / 100
 
             branch.scale = (2,2,2)
             branch.location = (0, 0, height)
-            branch.rotation_euler = (0, np.pi / 2 * (- direction*2 + 1), 0) 
+            branch.rotation_euler = (4.7, -13, np.pi / 2 * (- direction*2 + 1)) 
         else:
             metaball = bpy.data.metaballs.new("Metaball")
             metaball_obj = bpy.data.objects.new("MetaballObject", metaball)
@@ -161,7 +166,6 @@ class GitCommitTree:
 
             # Select the metaball object
             metaball_obj.select_set(True)
-
 
             # Add a new ball element to the metaball
             ball = metaball.elements.new(type='BALL')
@@ -201,6 +205,17 @@ class GitCommitTree:
                 
             else:
                 horizontal += 0.1
+
+        bpy.ops.object.select_all(action='DESELECT')
+        metaball_obj = bpy.data.objects.get('MetaballObject')
+        bpy.context.view_layer.objects.active = metaball_obj
+        metaball_obj.select_set(True)
+        bpy.ops.object.convert(target='MESH')
+        mesh_obj = bpy.context.active_object
+        
+        material = bpy.data.materials.get("Branch")
+        mesh_obj.data.materials.append(material)
+        bpy.context.view_layer.update()
 
         # Update the mesh and the scene
         mesh.update()
