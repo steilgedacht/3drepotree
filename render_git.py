@@ -48,7 +48,7 @@ prepare_scene()
 
 repo_path = '/home/benjamin/Schreibtisch/JKU/Semester 4/Pattern Classification/repository/bird_boy/'
 # repo_path = "/home/benjamin/Schreibtisch/JKU/Semester 5/Missing Semester/first_project/"
-repo_path = '/home/benjamin/Dokumente/tmp/logseq_rep/logseq/'
+# repo_path = '/home/benjamin/Dokumente/tmp/logseq_rep/logseq/'
 
 class CommitNode:
     def __init__(self, commit_hash, parent_hashes, message, author, date, idx):
@@ -127,9 +127,9 @@ class GitCommitTree:
         commit_node = CommitNode(commit_hash, parent_hashes, message, author, date, len(self.commits))
         self.add_commit(commit_node, update)
 
-    def add_branch(self, horizontal, height, direction):
+    def add_branch(self, horizontal, height, direction, max_height):
 
-        if horizontal > 4:
+        if max_height < 10:
             # Get the source scene and object
             source_scene = bpy.data.scenes["Tree Branch"]
             source_object = source_scene.objects["branch"]
@@ -149,6 +149,32 @@ class GitCommitTree:
             branch.modifiers["GeometryNodes"]["Socket_2"] = horizontal
             branch.modifiers["GeometryNodes"]["Socket_5"] = 3 / (height + 1) + 0.2
             bpy.context.object.modifiers["GeometryNodes"]["Socket_5"] = 1.4
+            bpy.context.object.modifiers["GeometryNodes"]["Socket_9"] = max_height * 0.1
+
+
+            branch.scale = (2,2,2)
+            branch.location = (0, 0, height)
+            branch.rotation_euler = (4.7, -13, np.pi / 2 * (- direction*2 + 1))
+        elif horizontal > 4:
+            # Get the source scene and object
+            source_scene = bpy.data.scenes["Tree Branch"]
+            source_object = source_scene.objects["branch"]
+
+            # Create a new object in the current scene by copying the source object
+            branch = source_object.copy()
+            branch.data = source_object.data.copy()
+
+            # Link the new object to the current scene
+            bpy.context.collection.objects.link(branch)
+
+            # Make the new object the active object in the current scene
+            bpy.context.view_layer.objects.active = branch
+
+            # Select the new object
+            branch.select_set(True)
+            branch.modifiers["GeometryNodes"]["Socket_2"] = horizontal
+            branch.modifiers["GeometryNodes"]["Socket_5"] = 3 / (height + 1) + 0.2
+            bpy.context.object.modifiers["GeometryNodes"]["Socket_5"] = 0.4
             bpy.context.object.modifiers["GeometryNodes"]["Socket_9"] = 0.4 + height / 100
 
             branch.scale = (2,2,2)
@@ -175,8 +201,6 @@ class GitCommitTree:
             ball.co = (horizontal * (- direction*2 + 1), 0, height)
 
 
-
-
     def create_mesh_for_tree(self):
 
         radius = 0.5
@@ -186,6 +210,13 @@ class GitCommitTree:
 
         # Link the object to the scene
         bpy.context.collection.objects.link(obj)
+
+
+        # calculate max_height
+        max_height = 0
+        for node in self.commits.values(): 
+            if len(node.parents) > 1:
+                max_height += 0.2
 
         # Set the object's location (optional)
         obj.location = (0, 0, 0)  # Set the location to the desired position
@@ -197,7 +228,7 @@ class GitCommitTree:
         for i, node in enumerate(self.commits.values()): 
             if len(node.parents) > 1:
 
-                self.add_branch(horizontal, height, direction)
+                self.add_branch(horizontal, height, direction, max_height)
 
                 horizontal = 0
                 height += 0.2
@@ -206,16 +237,17 @@ class GitCommitTree:
             else:
                 horizontal += 0.1
 
-        bpy.ops.object.select_all(action='DESELECT')
-        metaball_obj = bpy.data.objects.get('MetaballObject')
-        bpy.context.view_layer.objects.active = metaball_obj
-        metaball_obj.select_set(True)
-        bpy.ops.object.convert(target='MESH')
-        mesh_obj = bpy.context.active_object
+        if max_height > 10:
+            bpy.ops.object.select_all(action='DESELECT')
+            metaball_obj = bpy.data.objects.get('MetaballObject')
+            bpy.context.view_layer.objects.active = metaball_obj
+            metaball_obj.select_set(True)
+            bpy.ops.object.convert(target='MESH')
+            mesh_obj = bpy.context.active_object
         
-        material = bpy.data.materials.get("Branch")
-        mesh_obj.data.materials.append(material)
-        bpy.context.view_layer.update()
+            material = bpy.data.materials.get("Branch")
+            mesh_obj.data.materials.append(material)
+            bpy.context.view_layer.update()
 
         # Update the mesh and the scene
         mesh.update()
@@ -239,12 +271,35 @@ class GitCommitTree:
         # settings.count = 100
 
         camera_obj = bpy.data.objects["CustomCamera"] 
-        camera_obj.location = (0, -height, height/2)  # Adjust the position as needed
-        camera_obj.rotation_euler = (np.pi/2, 0, 0)
-        camera_obj.data.lens = 30
+        camera_obj.location = (0, -2*max_height - 10, 1)  # Adjust the position as needed
+        camera_obj.rotation_euler = (1.74, 0, 0)
+        camera_obj.data.lens = 50
         bpy.ops.object.select_all(action='DESELECT')
         camera_obj.select_set(True)
         bpy.context.view_layer.objects.active = camera_obj
+
+        # Specify the source scene and collection name
+        source_scene_name = "Tree Branch"  # Replace with the name of the source scene
+        collection_name_to_copy = "env"    # Replace with the name of the collection you want to copy
+
+        # Get the source scene and collection
+        source_scene = bpy.data.scenes.get(source_scene_name)
+        collection_to_copy = bpy.data.collections.get(collection_name_to_copy)
+
+        # Check if the source scene and collection exist
+        if source_scene and collection_to_copy:
+            # Create a new collection in the current scene
+            current_scene = bpy.context.scene
+            new_collection = bpy.data.collections.new(collection_name_to_copy)
+
+            # Link the new collection to the current scene
+            current_scene.collection.children.link(new_collection)
+
+            # Copy the objects from the source collection to the new collection
+            for obj in collection_to_copy.objects:
+                new_obj = obj.copy()
+                new_obj.data = obj.data.copy()
+                new_collection.objects.link(new_obj)
 
 
 repo = Repo(repo_path)

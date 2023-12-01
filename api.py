@@ -14,11 +14,6 @@ app.add_middleware(
 @app.post("/process_string/")
 async def process_string_route(data: dict):
     print("test")
-    input_string = data.get("input_string")
-    if input_string is None:
-        return {"error": "Input string is missing"}
-    
-    # Process the input string as needed
-    processed_string = input_string.upper()
-    
+    url = data.get("input_string")
+
     return {"processed_string": processed_string}
