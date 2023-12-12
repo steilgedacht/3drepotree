@@ -4,9 +4,7 @@ from git.objects import commit
 import bpy
 from git import Repo
 from tqdm import tqdm
-import sys
 import numpy as np
-import os
 
 print()
 
@@ -30,7 +28,6 @@ def prepare_scene():
     bpy.ops.object.select_by_type(type='LIGHT')
     bpy.ops.object.select_by_type(type='CAMERA')
     bpy.ops.object.delete()
-    bpy.ops.mesh.primitive_cube_add(size=2, location=(-10, 0, 0))
 
     # add a camera
     camera_data = bpy.data.cameras.new("CustomCamera")
@@ -205,7 +202,7 @@ class GitCommitTree:
 
     def create_mesh_for_tree(self):
 
-        radius = 0.5
+        height_threshold = 200
         # Create a new mesh
         mesh = bpy.data.meshes.new("SingleVertexMesh")
         obj = bpy.data.objects.new("SingleVertexObject", mesh)
@@ -220,6 +217,8 @@ class GitCommitTree:
             if len(node.parents) > 1:
                 max_height += 0.2
 
+        max_height = min(max_height, height_threshold)
+
         # Set the object's location (optional)
         obj.location = (0, 0, 0)  # Set the location to the desired position
 
@@ -228,6 +227,7 @@ class GitCommitTree:
         horizontal = 0
         direction = True
         for i, node in enumerate(self.commits.values()): 
+            if height > height_threshold: break # this is because otherwise the tree gets too big
             if len(node.parents) > 1:
 
                 self.add_branch(horizontal, height, direction, max_height)
@@ -254,31 +254,8 @@ class GitCommitTree:
         # Update the mesh and the scene
         mesh.update()
 
-
         # Make the object active (optional)
         bpy.context.view_layer.objects.active = obj
-        # bpy.ops.object.modifier_add(type='SKIN')
-        # bpy.ops.object.modifier_add(type='SUBSURF')
-
-        # obj.modifiers.new("part", type='PARTICLE_SYSTEM')
-        # part = obj.particle_systems[0]
-
-        # settings = part.settings
-        # settings.type = 'HAIR'
-        # settings.emit_from = 'VERT'
-        # settings.use_modifier_stack = True
-        # settings.render_type = "OBJECT"
-        # settings.instance_object = bpy.data.objects['Cube']
-        # settings.particle_size = 0.02
-        # settings.count = 100
-
-        # camera_obj = bpy.data.objects["CustomCamera"]
-        # camera_obj.location = (0, -2*max_height - 10, 1)  # Adjust the position as needed
-        # camera_obj.rotation_euler = (1.74, 0, 0)
-        # camera_obj.data.lens = 50
-        # bpy.ops.object.select_all(action='DESELECT')
-        # camera_obj.select_set(True)
-        # bpy.context.view_layer.objects.active = camera_obj
 
         camera_obj = bpy.data.objects.get("CustomCamera")
         camera_obj.location = (0, -2 * max_height - 10, 1)
@@ -311,7 +288,6 @@ class GitCommitTree:
                 new_obj = obj.copy()
                 new_obj.data = obj.data.copy()
                 new_collection.objects.link(new_obj)
-
 
 
 repo = Repo(repo_path)
