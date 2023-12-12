@@ -4,8 +4,9 @@ from git.objects import commit
 import bpy
 from git import Repo
 from tqdm import tqdm
-
+import sys
 import numpy as np
+import os
 
 print()
 
@@ -41,14 +42,15 @@ def prepare_scene():
     new_light = bpy.context.active_object
     new_light.rotation_euler = (0, 0.97, -0.73)
 
-
+file_path = 'link.txt' 
+base_path = bpy.path.abspath('//')
+with open(base_path + file_path, 'r') as file:
+    file_contents = file.read()
+    repo_path = file_contents.replace('\n', '')
 
 
 prepare_scene()
 
-repo_path = '/home/benjamin/Schreibtisch/JKU/Semester 4/Pattern Classification/repository/bird_boy/'
-# repo_path = "/home/benjamin/Schreibtisch/JKU/Semester 5/Missing Semester/first_project/"
-# repo_path = '/home/benjamin/Dokumente/tmp/logseq_rep/logseq/'
 
 class CommitNode:
     def __init__(self, commit_hash, parent_hashes, message, author, date, idx):
@@ -270,13 +272,22 @@ class GitCommitTree:
         # settings.particle_size = 0.02
         # settings.count = 100
 
-        camera_obj = bpy.data.objects["CustomCamera"] 
-        camera_obj.location = (0, -2*max_height - 10, 1)  # Adjust the position as needed
+        # camera_obj = bpy.data.objects["CustomCamera"]
+        # camera_obj.location = (0, -2*max_height - 10, 1)  # Adjust the position as needed
+        # camera_obj.rotation_euler = (1.74, 0, 0)
+        # camera_obj.data.lens = 50
+        # bpy.ops.object.select_all(action='DESELECT')
+        # camera_obj.select_set(True)
+        # bpy.context.view_layer.objects.active = camera_obj
+
+        camera_obj = bpy.data.objects.get("CustomCamera")
+        camera_obj.location = (0, -2 * max_height - 10, 1)
         camera_obj.rotation_euler = (1.74, 0, 0)
         camera_obj.data.lens = 50
-        bpy.ops.object.select_all(action='DESELECT')
-        camera_obj.select_set(True)
-        bpy.context.view_layer.objects.active = camera_obj
+
+        # Set the camera object as the active camera
+        bpy.context.scene.camera = camera_obj
+
 
         # Specify the source scene and collection name
         source_scene_name = "Tree Branch"  # Replace with the name of the source scene
@@ -300,6 +311,7 @@ class GitCommitTree:
                 new_obj = obj.copy()
                 new_obj.data = obj.data.copy()
                 new_collection.objects.link(new_obj)
+
 
 
 repo = Repo(repo_path)
